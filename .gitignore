@@ -1,6 +1,7 @@
 build/
 engine/bin/
 engine/source/_generated/
+engine/source/meta_parser/3rd_party/
 cpm_modules/
 CPM_modules/
 CPM_*.cmake
@@ -432,3 +433,5 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+engine/source/meta_parser/3rd_party/LLVM/bin/
+engine/thirdparty/VulkanSDK/bin/
