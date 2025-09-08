@@ -25,6 +25,7 @@ namespace Momo
         m_character_object = gobject;
         if (m_character_object)
         {
+            // 拿到 Transform 组件
             const TransformComponent* transform_component =
                 m_character_object->tryGetComponentConst(TransformComponent);
             const Transform& transform = transform_component->getTransformConst();
@@ -43,6 +44,7 @@ namespace Momo
         if (m_character_object == nullptr)
             return;
 
+        // 从全局拿到输入
         unsigned int command = g_runtime_global_context.m_input_system->getGameCommand();
         if (command < (unsigned int)GameCommand::invalid)
         {
@@ -68,22 +70,14 @@ namespace Momo
 
         if (motor_component->getIsMoving())
         {
-            m_rotation_buffer = m_rotation;
-            transform_component->setRotation(m_rotation_buffer);
-            m_rotation_dirty = true;
+            m_rotation_buffer = m_rotation;           // 把当前逻辑旋转拷贝进缓存
+            transform_component->setRotation(m_rotation_buffer); // 立即写进 Transform
+            m_rotation_dirty = true;                  // 再次标记“还有待确认”
         }
 
         const Vector3& new_position = motor_component->getTargetPosition();
 
         m_position = new_position;
-
-        //float blend_ratio = std::max(1.f, motor_component->getSpeedRatio());
-
-        //float frame_length = delta_time * blend_ratio;
-        //m_position =
-        //    (m_position * (s_camera_blend_time - frame_length) + new_position * frame_length) / s_camera_blend_time;
-        //m_position =
-        //    (m_position * (s_camera_blend_time - frame_length) + new_position * frame_length) / s_camera_blend_time;
     }
 
     void Character::toggleFreeCamera()

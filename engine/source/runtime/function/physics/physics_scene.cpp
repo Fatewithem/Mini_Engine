@@ -290,9 +290,10 @@ namespace Momo
 
     bool PhysicsScene::isOverlap(const RigidBodyShape& shape, const Matrix4x4& global_transform)
     {
+        // 精确碰撞检测
         const JPH::NarrowPhaseQuery& scene_query = m_physics.m_jolt_physics_system->GetNarrowPhaseQuery();
 
-        const Matrix4x4 shape_global_transform = global_transform * shape.m_local_transform.getMatrix();
+        const Matrix4x4 shape_global_transform = global_transform * shape.m_local_transform.getMatrix();  // shape 的最终世界矩阵
 
         Vector3    global_position, global_scale;
         Quaternion global_rotation;

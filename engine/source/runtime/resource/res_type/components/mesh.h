@@ -22,6 +22,7 @@ namespace Momo
         REFLECTION_BODY(MeshComponentRes);
 
     public:
+        // 子 mesh
         std::vector<SubMeshRes> m_sub_meshes;
     };
 } // namespace Momo

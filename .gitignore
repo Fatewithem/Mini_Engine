@@ -435,3 +435,7 @@ MigrationBackup/
 FodyWeavers.xsd
 engine/source/meta_parser/3rd_party/LLVM/bin/
 engine/thirdparty/VulkanSDK/bin/
+
+# Ignore VulkanSDK binaries & local imgui config
+engine/thirdparty/VulkanSDK/bin/
+imgui.ini

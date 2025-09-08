@@ -16,7 +16,7 @@ namespace Momo
     public:
         Character(std::shared_ptr<GObject> character_object);
 
-        GObjectID getObjectID() const;
+        GObjectID getObjectID() const;  
         void      setObject(std::shared_ptr<GObject> gobject);
         std::weak_ptr<GObject> getObject() const { return m_character_object; }
 
@@ -31,9 +31,11 @@ namespace Momo
     private:
         void toggleFreeCamera();
 
+        // 位置旋转信息
         Vector3    m_position;
         Quaternion m_rotation;
 
+        // 全局不同的 id， 原子性
         std::shared_ptr<GObject> m_character_object;
 
         // hack for setting rotation frame buffer

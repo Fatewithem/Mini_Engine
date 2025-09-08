@@ -27,8 +27,8 @@ namespace Momo
         static constexpr uint8_t UNUSED4    = 3;
         static constexpr uint8_t NON_MOVING = 4;
         static constexpr uint8_t MOVING     = 5;
-        static constexpr uint8_t DEBRIS     = 6; // Example: Debris collides only with NON_MOVING
-        static constexpr uint8_t SENSOR     = 7; // Sensors only collide with MOVING objects
+        static constexpr uint8_t DEBRIS     = 6; // Example: Debris collides only with NON_MOVING 碎片
+        static constexpr uint8_t SENSOR     = 7; // Sensors only collide with MOVING objects 传感器用于检测进入某个区域
         static constexpr uint8_t NUM_LAYERS = 8;
     }; // namespace Layers
 
@@ -65,7 +65,7 @@ namespace Momo
         JPH::BroadPhaseLayer m_object_to_broad_phase[Layers::NUM_LAYERS];
     };
 
-    /// Function that determines if two object layers can collide
+    /// Function that determines if two object layers can collide 
     bool ObjectCanCollide(JPH::ObjectLayer inObject1, JPH::ObjectLayer inObject2);
 
     /// Function that determines if two broadphase layers can collide

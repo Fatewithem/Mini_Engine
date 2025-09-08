@@ -25,7 +25,7 @@ namespace Momo
             m_controller_type = ControllerType::physics;
             PhysicsControllerConfig* controller_config =
                 static_cast<PhysicsControllerConfig*>(m_motor_res.m_controller_config);
-            m_controller = new CharacterController(controller_config->m_capsule_shape);
+            m_controller = new CharacterController(controller_config->m_capsule_shape);  // 在这里创建 角色的controller
         }
         else if (m_motor_res.m_controller_config != nullptr)
         {
@@ -68,6 +68,7 @@ namespace Momo
 
         Radian turn_angle_yaw = g_runtime_global_context.m_input_system->m_cursor_delta_yaw;
 
+        // 取出当前的指令
         unsigned int command = g_runtime_global_context.m_input_system->getGameCommand();
 
         if (command >= (unsigned int)GameCommand::invalid)
@@ -87,6 +88,7 @@ namespace Momo
         bool has_move_command = ((unsigned int)GameCommand::forward | (unsigned int)GameCommand::backward |
                                  (unsigned int)GameCommand::left | (unsigned int)GameCommand::right) &
                                 command;
+        // 如果是 editor 模式的 free_camera，全0
         has_move_command &= ((unsigned int)GameCommand::free_carema & command) == 0;
         bool has_sprint_command = (unsigned int)GameCommand::sprint & command;
 
@@ -189,8 +191,8 @@ namespace Momo
 
     void MotorComponent::calculateDesiredDisplacement(float delta_time)
     {
-        float horizontal_speed_ratio =
-            m_jump_state == JumpState::idle ? m_move_speed_ratio : m_jump_horizontal_speed_ratio;
+        float horizontal_speed_ratio = m_jump_state == JumpState::idle ? m_move_speed_ratio : m_jump_horizontal_speed_ratio;
+        
         m_desired_displacement =
             m_desired_horizontal_move_direction * m_motor_res.m_move_speed * horizontal_speed_ratio * delta_time +
             Vector3::UNIT_Z * m_vertical_move_speed * delta_time;

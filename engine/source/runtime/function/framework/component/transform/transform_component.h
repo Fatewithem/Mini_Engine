@@ -41,7 +41,7 @@ namespace Momo
         META(Enable)
         Transform m_transform;
 
-        Transform m_transform_buffer[2];
+        Transform m_transform_buffer[2];  // 避免了读和写相同的数据
         size_t    m_current_index {0};
         size_t    m_next_index {1};
     };

@@ -41,9 +41,9 @@ namespace Momo
         void tickFreeCamera(float delta_time);
 
         META(Enable)
-        CameraComponentRes m_camera_res;
+        CameraComponentRes m_camera_res;  // 资源参数
 
-        CameraMode m_camera_mode {CameraMode::invalid};
+        CameraMode m_camera_mode {CameraMode::invalid};  // 相机模式
 
         Vector3 m_position;
 

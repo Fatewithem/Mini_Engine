@@ -39,7 +39,7 @@ namespace Momo
             LOG_ERROR("invalid camera type");
         }
 
-        RenderSwapContext& swap_context = g_runtime_global_context.m_render_system->getSwapContext();
+        RenderSwapContext& swap_context = g_runtime_global_context.m_render_system->getSwapContext();  // 写入渲染交换区
         CameraSwapData     camera_swap_data;
         camera_swap_data.m_fov_x                           = m_camera_res.m_parameter->m_fov;
         swap_context.getLogicSwapData().m_camera_swap_data = camera_swap_data;
@@ -81,18 +81,20 @@ namespace Momo
         if (current_character == nullptr)
             return;
 
+        // 读取输入系统的鼠标偏航/俯仰
         Quaternion q_yaw, q_pitch;
 
         q_yaw.fromAngleAxis(g_runtime_global_context.m_input_system->m_cursor_delta_yaw, Vector3::UNIT_Z);
         q_pitch.fromAngleAxis(g_runtime_global_context.m_input_system->m_cursor_delta_pitch, m_left);
 
         const float offset  = static_cast<FirstPersonCameraParameter*>(m_camera_res.m_parameter)->m_vertical_offset;
-        m_position = current_character->getPosition() + offset * Vector3::UNIT_Z;
+        m_position = current_character->getPosition() + offset * Vector3::UNIT_Z;  // 读取输入系统的鼠标偏航/俯仰
 
         m_forward = q_yaw * q_pitch * m_forward;
         m_left    = q_yaw * q_pitch * m_left;
         m_up      = m_forward.crossProduct(m_left);
 
+        // 生成视图矩阵 lookAt(position, position+forward, up) 写入渲染交换区
         Matrix4x4 desired_mat = Math::makeLookAtMatrix(m_position, m_position + m_forward, m_up);
 
         RenderSwapContext& swap_context = g_runtime_global_context.m_render_system->getSwapContext();
@@ -101,6 +103,7 @@ namespace Momo
         camera_swap_data.m_view_matrix                     = desired_mat;
         swap_context.getLogicSwapData().m_camera_swap_data = camera_swap_data;
 
+        // 同步角色朝向（用相机的水平方向对齐角色正前方）
         Vector3    object_facing = m_forward - m_forward.dotProduct(Vector3::UNIT_Z) * Vector3::UNIT_Z;
         Vector3    object_left   = Vector3::UNIT_Z.crossProduct(object_facing);
         Quaternion object_rotation;
@@ -117,6 +120,7 @@ namespace Momo
 
         ThirdPersonCameraParameter* param = static_cast<ThirdPersonCameraParameter*>(m_camera_res.m_parameter);
 
+        // 读取 yaw/pitch 增量：yaw 直接作用在角色旋转上；pitch 叠加到“相机围绕角色的俯仰旋转”（param->m_cursor_pitch）
         Quaternion q_yaw, q_pitch;
 
         q_yaw.fromAngleAxis(g_runtime_global_context.m_input_system->m_cursor_delta_yaw, Vector3::UNIT_Z);
@@ -128,6 +132,7 @@ namespace Momo
         const float horizontal_offset = param->m_horizontal_offset;
         Vector3     offset            = Vector3(0, horizontal_offset, vertical_offset);
 
+        // 依据水平/垂直偏移把相机放在角色后上方的轨道位置
         Vector3 center_pos = current_character->getPosition() + Vector3::UNIT_Z * vertical_offset;
         m_position =
             current_character->getRotation() * param->m_cursor_pitch * offset + current_character->getPosition();
@@ -140,6 +145,7 @@ namespace Momo
 
         Matrix4x4 desired_mat = Math::makeLookAtMatrix(m_position, m_position + m_forward, m_up);
 
+        // 写入视图矩阵到渲染交换区
         RenderSwapContext& swap_context = g_runtime_global_context.m_render_system->getSwapContext();
         CameraSwapData     camera_swap_data;
         camera_swap_data.m_camera_type                     = RenderCameraType::Motor;

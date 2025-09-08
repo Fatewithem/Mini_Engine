@@ -4,22 +4,24 @@
 
 namespace Momo
 {
-
+    // 给定 GObject、路径（如 "TransformComponent.position.x"），逐层解析，找到最终字段对应的 FieldAccessor + 目标实例指针
     bool find_component_field(std::weak_ptr<GObject>     game_object,
                               const char*                field_name,
                               Reflection::FieldAccessor& field_accessor,
                               void*&                     target_instance)
     {
+        // 拿到宿主对象上的组件容器
         auto components = game_object.lock()->getComponents();
 
         std::istringstream iss(field_name);
         std::string        current_name;
-        std::getline(iss, current_name, '.');
+        std::getline(iss, current_name, '.');  // 按 . 切分
+
         auto component_iter = std::find_if(
             components.begin(), components.end(), [current_name](auto c) { return c.getTypeName() == current_name; });
         if (component_iter != components.end())
         {
-            auto  meta           = Reflection::TypeMeta::newMetaFromName(current_name);
+            auto  meta           = Reflection::TypeMeta::newMetaFromName(current_name);  // 当前对象的运行时类型信息
             void* field_instance = component_iter->getPtr();
 
             // find target field
@@ -27,8 +29,7 @@ namespace Momo
             {
                 Reflection::FieldAccessor* fields;
                 int                        fields_count = meta.getFieldsList(fields);
-                auto                       field_iter   = std::find_if(
-                    fields, fields + fields_count, [current_name](auto f) { return f.getFieldName() == current_name; });
+                auto                       field_iter   = std::find_if(fields, fields + fields_count, [current_name](auto f) { return f.getFieldName() == current_name; });
                 if (field_iter == fields + fields_count) // not found
                 {
                     delete[] fields;
@@ -150,12 +151,13 @@ namespace Momo
     {
         m_parent_object = parent_object;
         m_lua_state.open_libraries(sol::lib::base);
-        m_lua_state.set_function("set_float", &LuaComponent::set<float>);
-        m_lua_state.set_function("get_bool", &LuaComponent::get<bool>);
-        m_lua_state.set_function("invoke", &LuaComponent::invoke);
+        m_lua_state.set_function("set_float", &LuaComponent::set<float>);  // 绑定到 LuaComponent::set<float>：按“路径字符串”设值
+        m_lua_state.set_function("get_bool", &LuaComponent::get<bool>);    // 绑定到 LuaComponent::get<bool>：按“路径字符串”取值
+        m_lua_state.set_function("invoke", &LuaComponent::invoke);         // 绑定到 LuaComponent::invoke：按“路径字符串”调用方法（无参）
         m_lua_state["GameObject"] = m_parent_object;
     }
 
+    // 每帧都重新执行脚本文本
     void LuaComponent::tick(float delta_time)
     {
         // LOG_INFO(m_lua_script);

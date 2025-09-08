@@ -18,7 +18,7 @@ namespace Momo
     void WorldManager::initialize()
     {
         m_is_world_loaded   = false;
-        m_current_world_url = g_runtime_global_context.m_config_manager->getDefaultWorldUrl();
+        m_current_world_url = g_runtime_global_context.m_config_manager->getDefaultWorldUrl();  // 获取初始的 worldUrl
 
         //debugger
         m_level_debugger = std::make_shared<LevelDebugger>();
@@ -26,7 +26,7 @@ namespace Momo
 
     void WorldManager::clear()
     {
-        // unload all loaded levels
+        // unload 所有的 level
         for (auto level_pair : m_loaded_levels)
         {
             level_pair.second->unload();
@@ -51,7 +51,7 @@ namespace Momo
             loadWorld(m_current_world_url);
         }
 
-        // tick the active level
+        // tick 当前激活的 level
         std::shared_ptr<Level> active_level = m_current_active_level.lock();
         if (active_level)
         {
@@ -71,6 +71,7 @@ namespace Momo
         return active_level->getPhysicsScene();
     }
 
+    // 读取 world 参数
     bool WorldManager::loadWorld(const std::string& world_url)
     {
         LOG_INFO("loading world: {}", world_url);
@@ -101,6 +102,7 @@ namespace Momo
         return true;
     }
 
+    // 读取各个 level 关卡
     bool WorldManager::loadLevel(const std::string& level_url)
     {
         std::shared_ptr<Level> level = std::make_shared<Level>();
@@ -123,10 +125,11 @@ namespace Momo
         auto active_level = m_current_active_level.lock();
         if (active_level == nullptr)
         {
-            LOG_WARN("current level is nil");
+            LOG_WARN("current level is null");
             return;
         }
 
+        // 获取当前 level 的资源
         const std::string level_url = active_level->getLevelResUrl();
         active_level->unload();
         m_loaded_levels.erase(level_url);
@@ -144,7 +147,7 @@ namespace Momo
 
         m_current_active_level = iter->second;
 
-        LOG_INFO("reload current evel succeed");
+        LOG_INFO("reload current level succeed");
     }
 
     void WorldManager::saveCurrentLevel()

@@ -39,6 +39,7 @@ namespace Momo
             LOG_FATAL("cannot allocate memory for new gobject");
         }
 
+        // 向 m_gobjects 中添加 object
         bool is_loaded = gobject->load(object_instance_res);
         if (is_loaded)
         {
@@ -142,6 +143,7 @@ namespace Momo
             return;
         }
 
+        // 调用每一个 GO 的 tick
         for (const auto& id_object_pair : m_gobjects)
         {
             assert(id_object_pair.second);
@@ -150,11 +152,14 @@ namespace Momo
                 id_object_pair.second->tick(delta_time);
             }
         }
+
+        // 人物的 tick
         if (m_current_active_character && g_is_editor_mode == false)
         {
             m_current_active_character->tick(delta_time);
         }
 
+        // 物理场景的 tick
         std::shared_ptr<PhysicsScene> physics_scene = m_physics_scene.lock();
         if (physics_scene)
         {

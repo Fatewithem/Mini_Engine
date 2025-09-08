@@ -35,10 +35,10 @@ namespace Momo
     {
         struct JoltPhysics
         {
-            JPH::PhysicsSystem*            m_jolt_physics_system {nullptr};
-            JPH::JobSystem*                m_jolt_job_system {nullptr};
-            JPH::TempAllocator*            m_temp_allocator {nullptr};
-            JPH::BroadPhaseLayerInterface* m_jolt_broad_phase_layer_interface {nullptr};
+            JPH::PhysicsSystem*            m_jolt_physics_system {nullptr};               // 世界
+            JPH::JobSystem*                m_jolt_job_system {nullptr};                   // 并行任务
+            JPH::TempAllocator*            m_temp_allocator {nullptr};                    // 临时内存
+            JPH::BroadPhaseLayerInterface* m_jolt_broad_phase_layer_interface {nullptr};  // 宽相层定义
 
             int m_collision_steps {1};
             int m_integration_substeps {1};
@@ -92,10 +92,12 @@ namespace Momo
 
     protected:
         // we use single Jolt physics system for each scene
+        // 封装 Jolt 的核心对象
         JoltPhysics m_physics;
-
+        
         PhysicsConfig m_config;
 
+        // 延迟删除的 body ID 队列
         std::vector<uint32_t> m_pending_remove_bodies;
     };
 } // namespace Momo

@@ -14,8 +14,8 @@ namespace Momo
 
     struct RenderPipelineInitInfo
     {
-        bool                                enable_fxaa {false};
-        std::shared_ptr<RenderResourceBase> render_resource;
+        bool                                enable_fxaa {false};  // 是否使用 fxaa
+        std::shared_ptr<RenderResourceBase> render_resource;      // 拿到渲染的资源
     };
 
     class RenderPipelineBase
@@ -49,6 +49,6 @@ namespace Momo
         std::shared_ptr<RenderPassBase> m_combine_ui_pass;
         std::shared_ptr<RenderPassBase> m_pick_pass;
         std::shared_ptr<RenderPassBase> m_particle_pass;
-
+        
     };
 } // namespace Momo

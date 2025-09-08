@@ -25,13 +25,14 @@ namespace Momo
         EditorUI();
 
     private:
-        void        onFileContentItemClicked(EditorFileNode* node);
-        void        buildEditorFileAssetsUITree(EditorFileNode* node);
-        void        drawAxisToggleButton(const char* string_id, bool check_state, int axis_mode);
-        void        createClassUI(Reflection::ReflectionInstance& instance);
+        void        onFileContentItemClicked(EditorFileNode* node);                                // 点击文件树的节点
+        void        buildEditorFileAssetsUITree(EditorFileNode* node);                             // 绘制文件资源树
+        void        drawAxisToggleButton(const char* string_id, bool check_state, int axis_mode);  // 绘制坐标轴模式切换
+        void        createClassUI(Reflection::ReflectionInstance& instance);                       // 通过反射生成组件
         void        createLeafNodeUI(Reflection::ReflectionInstance& instance);
-        std::string getLeafUINodeParentLabel();
+        std::string getLeafUINodeParentLabel();                                                    // 生成 UI 控件的唯一 ID 前缀
 
+        // 显示不同的面板
         void showEditorUI();
         void showEditorMenu(bool* p_open);
         void showEditorWorldObjectsWindow(bool* p_open);

@@ -28,6 +28,7 @@ namespace Momo
 
         void tick(float delta_time);
 
+        // 从 json 读过来的资源 url
         const std::string& getLevelResUrl() const { return m_level_res_url; }
 
         const LevelObjectsMap& getAllGObjects() const { return m_gobjects; }

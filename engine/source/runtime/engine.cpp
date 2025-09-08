@@ -12,6 +12,7 @@
 #include "runtime/function/render/window_system.h"
 #include "runtime/function/render/debugdraw/debug_draw_manager.h"
 
+// 反射注册 → 系统启动 → 每帧逻辑更新 → 逻辑/渲染数据交换 → 渲染 → 事件处理与 UI 标题 → 关闭判断 → 系统回收与反射反注册
 namespace Momo
 {
     bool                            g_is_editor_mode {false};
@@ -19,8 +20,10 @@ namespace Momo
 
     void MomoEngine::startEngine(const std::string& config_file_path)
     {
+        // 先完成反射注册
         Reflection::TypeMetaRegister::metaRegister();
 
+        // 配置个子系统
         g_runtime_global_context.startSystems(config_file_path);
 
         LOG_INFO("engine start");

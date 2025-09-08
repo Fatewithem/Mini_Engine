@@ -13,7 +13,7 @@
 namespace Momo
 {
     /// GObject : Game Object base class
-    class GObject : public std::enable_shared_from_this<GObject>
+    class GObject : public std::enable_shared_from_this<GObject>  // 允许返回 this 指针
     {
         typedef std::unordered_set<std::string> TypeNameSet;
 
@@ -35,6 +35,8 @@ namespace Momo
 
         std::vector<Reflection::ReflectionPtr<Component>> getComponents() { return m_components; }
 
+
+        // 从 GO 中拿名字对应的 component
         template<typename TComponent>
         TComponent* tryGetComponent(const std::string& compenent_type_name)
         {
@@ -64,7 +66,8 @@ namespace Momo
 
 #define tryGetComponent(COMPONENT_TYPE) tryGetComponent<COMPONENT_TYPE>(#COMPONENT_TYPE)
 #define tryGetComponentConst(COMPONENT_TYPE) tryGetComponentConst<const COMPONENT_TYPE>(#COMPONENT_TYPE)
-
+    
+    // 子类可以看到
     protected:
         GObjectID   m_id {k_invalid_gobject_id};
         std::string m_name;

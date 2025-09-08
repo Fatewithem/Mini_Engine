@@ -31,7 +31,7 @@
 
 namespace Momo
 {
-    std::vector<std::pair<std::string, bool>> g_editor_node_state_array;
+    std::vector<std::pair<std::string, bool>> g_editor_node_state_array;  // 各个节点状态
     int                                       g_node_depth = -1;
     void                                      DrawVecControl(const std::string& label,
                                                              Momo::Vector3&    values,
@@ -45,28 +45,29 @@ namespace Momo
     EditorUI::EditorUI()
     {
         const auto& asset_folder            = g_runtime_global_context.m_config_manager->getAssetFolder();
-        m_editor_ui_creator["TreeNodePush"] = [this](const std::string& name, void* value_ptr) -> void {
-            static ImGuiTableFlags flags      = ImGuiTableFlags_Resizable | ImGuiTableFlags_NoSavedSettings;
-            bool                   node_state = false;
-            g_node_depth++;
-            if (g_node_depth > 0)
-            {
-                if (g_editor_node_state_array[g_node_depth - 1].second)
-                {
+        m_editor_ui_creator["TreeNodePush"] = [this](const std::string& name, void* ) {
+            bool node_state = false;
+            g_node_depth++;  // 深度入栈：当前层级 +1
+
+            if (g_node_depth > 0) { // 非根：需要看父是否展开
+                bool parent_open = g_editor_node_state_array[g_node_depth - 1].second;
+                if (parent_open) {
+                    // 父已展开：创建当前节点，并记录当前节点是否展开
                     node_state = ImGui::TreeNodeEx(name.c_str(), ImGuiTreeNodeFlags_SpanFullWidth);
-                }
-                else
-                {
-                    g_editor_node_state_array.emplace_back(std::pair(name.c_str(), node_state));
+                } else {
+                    // 父未展开：跳过当前子树，仅把占位状态压栈，保持 push/pop 对称
+                    g_editor_node_state_array.emplace_back(name, false);
                     return;
                 }
-            }
-            else
-            {
+            } else {
+                // 根节点：直接创建，并记录展开状态
                 node_state = ImGui::TreeNodeEx(name.c_str(), ImGuiTreeNodeFlags_SpanFullWidth);
             }
-            g_editor_node_state_array.emplace_back(std::pair(name.c_str(), node_state));
+            // 压栈：记录本节点的 (名称, 是否展开)
+            g_editor_node_state_array.emplace_back(name, node_state);
         };
+
+        // 结束当前节点 UI，执行 ImGui::TreePop 并维护节点栈
         m_editor_ui_creator["TreeNodePop"] = [this](const std::string& name, void* value_ptr) -> void {
             if (g_editor_node_state_array[g_node_depth].second)
             {
@@ -75,6 +76,8 @@ namespace Momo
             g_editor_node_state_array.pop_back();
             g_node_depth--;
         };
+
+        // 绘制 Transform 组件的 UI（位置、旋转、缩放），并将欧拉角转为四元数更新对象的旋转
         m_editor_ui_creator["Transform"] = [this](const std::string& name, void* value_ptr) -> void {
             if (g_editor_node_state_array[g_node_depth].second)
             {
@@ -119,6 +122,8 @@ namespace Momo
                 g_editor_global_context.m_scene_manager->drawSelectedEntityAxis();
             }
         };
+
+        // 绘制 UI 框，将 value 绑定到 bool 上
         m_editor_ui_creator["bool"] = [this](const std::string& name, void* value_ptr)  -> void {
             if(g_node_depth == -1)
             {
@@ -137,6 +142,7 @@ namespace Momo
                 }
             }
         };
+
         m_editor_ui_creator["int"] = [this](const std::string& name, void* value_ptr) -> void {
             if (g_node_depth == -1)
             {
@@ -196,6 +202,7 @@ namespace Momo
             vec_ptr->y = val[1];
             vec_ptr->z = val[2];
         };
+
         m_editor_ui_creator["Quaternion"] = [this](const std::string& name, void* value_ptr) -> void {
             Quaternion* qua_ptr = static_cast<Quaternion*>(value_ptr);
             float       val[4]  = {qua_ptr->x, qua_ptr->y, qua_ptr->z, qua_ptr->w};
@@ -220,6 +227,7 @@ namespace Momo
             qua_ptr->z = val[2];
             qua_ptr->w = val[3];
         };
+
         m_editor_ui_creator["std::string"] = [this, &asset_folder](const std::string& name, void* value_ptr) -> void {
             if (g_node_depth == -1)
             {
@@ -282,8 +290,10 @@ namespace Momo
                                         ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBackground |
                                         ImGuiConfigFlags_NoMouseCursorChange | ImGuiWindowFlags_NoBringToFrontOnFocus;
 
+        // 设定 menu UI 的位置
         const ImGuiViewport* main_viewport = ImGui::GetMainViewport();
         ImGui::SetNextWindowPos(main_viewport->WorkPos, ImGuiCond_Always);
+        // 设定 menu UI 的大小
         std::array<int, 2> window_size = g_editor_global_context.m_window_system->getWindowSize();
         ImGui::SetNextWindowSize(ImVec2((float)window_size[0], (float)window_size[1]), ImGuiCond_Always);
 
@@ -292,9 +302,9 @@ namespace Momo
         ImGui::Begin("Editor menu", p_open, window_flags);
 
         ImGuiID main_docking_id = ImGui::GetID("Main Docking");
-        if (ImGui::DockBuilderGetNode(main_docking_id) == nullptr)
+        if (ImGui::DockBuilderGetNode(main_docking_id) == nullptr)  // 首次创建
         {
-            ImGui::DockBuilderRemoveNode(main_docking_id);
+            ImGui::DockBuilderRemoveNode(main_docking_id);  // 清理旧节点
 
             ImGui::DockBuilderAddNode(main_docking_id, dock_flags);
             ImGui::DockBuilderSetNodePos(main_docking_id,
@@ -304,15 +314,16 @@ namespace Momo
 
             ImGuiID center = main_docking_id;
             ImGuiID left;
-            ImGuiID right = ImGui::DockBuilderSplitNode(center, ImGuiDir_Right, 0.25f, nullptr, &left);
+            ImGuiID right = ImGui::DockBuilderSplitNode(center, ImGuiDir_Right, 0.25f, nullptr, &left);  // 把中心切一刀，右边占 25%，剩下的给 left
 
             ImGuiID left_other;
-            ImGuiID left_file_content = ImGui::DockBuilderSplitNode(left, ImGuiDir_Down, 0.30f, nullptr, &left_other);
+            ImGuiID left_file_content = ImGui::DockBuilderSplitNode(left, ImGuiDir_Down, 0.30f, nullptr, &left_other);  // left 再竖直切开，下面 30% 用于 File Content
 
             ImGuiID left_game_engine;
             ImGuiID left_asset =
-                ImGui::DockBuilderSplitNode(left_other, ImGuiDir_Left, 0.30f, nullptr, &left_game_engine);
+                ImGui::DockBuilderSplitNode(left_other, ImGuiDir_Left, 0.30f, nullptr, &left_game_engine);  // 把上面剩余的 left_other 再横向切开，左边 30% 给 World Objects，右边 70% 给 Game Engine
 
+            // 绑定分区
             ImGui::DockBuilderDockWindow("World Objects", left_asset);
             ImGui::DockBuilderDockWindow("Components Details", right);
             ImGui::DockBuilderDockWindow("File Content", left_file_content);
@@ -329,13 +340,13 @@ namespace Momo
             {
                 if (ImGui::MenuItem("Reload Current Level"))
                 {
-                    g_runtime_global_context.m_world_manager->reloadCurrentLevel();
-                    g_runtime_global_context.m_render_system->clearForLevelReloading();
-                    g_editor_global_context.m_scene_manager->onGObjectSelected(k_invalid_gobject_id);
+                    g_runtime_global_context.m_world_manager->reloadCurrentLevel();                    // 重载当前关卡
+                    g_runtime_global_context.m_render_system->clearForLevelReloading();                // 清空资源    
+                    g_editor_global_context.m_scene_manager->onGObjectSelected(k_invalid_gobject_id);  // 恢复编辑器中选取对象状态
                 }
                 if (ImGui::MenuItem("Save Current Level"))
                 {
-                    g_runtime_global_context.m_world_manager->saveCurrentLevel();
+                    g_runtime_global_context.m_world_manager->saveCurrentLevel();  // 保存编辑的进度
                 }
                 if (ImGui::BeginMenu("Debug"))
                 {
@@ -386,7 +397,6 @@ namespace Momo
             }
             ImGui::EndMenuBar();
         }
-
         ImGui::End();
     }
 

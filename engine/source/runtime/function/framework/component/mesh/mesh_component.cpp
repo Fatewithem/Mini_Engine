@@ -15,7 +15,7 @@ namespace Momo
 {
     void MeshComponent::postLoadResource(std::weak_ptr<GObject> parent_object)
     {
-        m_parent_object = parent_object;
+        m_parent_object = parent_object; // weak_ptr，不提升引用计数，避免循环引用
 
         std::shared_ptr<AssetManager> asset_manager = g_runtime_global_context.m_asset_manager;
         ASSERT(asset_manager);
@@ -26,11 +26,13 @@ namespace Momo
         for (const SubMeshRes& sub_mesh : m_mesh_res.m_sub_meshes)
         {
             GameObjectPartDesc& meshComponent = m_raw_meshes[raw_mesh_count];
+
+            // 网格文件绝对路径
             meshComponent.m_mesh_desc.m_mesh_file =
                 asset_manager->getFullPath(sub_mesh.m_obj_file_ref).generic_string();
 
+            // 材质
             meshComponent.m_material_desc.m_with_texture = sub_mesh.m_material.empty() == false;
-
             if (meshComponent.m_material_desc.m_with_texture)
             {
                 MaterialRes material_res;
@@ -48,6 +50,7 @@ namespace Momo
                     asset_manager->getFullPath(material_res.m_emissive_texture_file).generic_string();
             }
 
+            // 局部矩阵
             auto object_space_transform = sub_mesh.m_transform.getMatrix();
 
             meshComponent.m_transform_desc.m_transform_matrix = object_space_transform;
@@ -61,13 +64,15 @@ namespace Momo
         if (!m_parent_object.lock())
             return;
 
+        // 拿到 transform 和 animation 组件
         TransformComponent*       transform_component = m_parent_object.lock()->tryGetComponent(TransformComponent);
-        const AnimationComponent* animation_component =
-            m_parent_object.lock()->tryGetComponentConst(AnimationComponent);
+        const AnimationComponent* animation_component = m_parent_object.lock()->tryGetComponentConst(AnimationComponent);
 
         if (transform_component->isDirty())
         {
             std::vector<GameObjectPartDesc> dirty_mesh_parts;
+
+            // 取出动画求解结果（骨骼姿态矩阵）
             SkeletonAnimationResult         animation_result;
             animation_result.m_transforms.push_back({Matrix4x4::IDENTITY});
             if (animation_component != nullptr)
@@ -77,23 +82,26 @@ namespace Momo
                     animation_result.m_transforms.push_back({Matrix4x4(node.transform)});
                 }
             }
+            
+            // 为每个要提交渲染的网格分片挂上骨骼数据
             for (GameObjectPartDesc& mesh_part : m_raw_meshes)
             {
                 if (animation_component)
                 {
                     mesh_part.m_with_animation                                = true;
                     mesh_part.m_skeleton_animation_result                     = animation_result;
-                    mesh_part.m_skeleton_binding_desc.m_skeleton_binding_file = mesh_part.m_mesh_desc.m_mesh_file;
+                    mesh_part.m_skeleton_binding_desc.m_skeleton_binding_file = mesh_part.m_mesh_desc.m_mesh_file;  // 蒙皮绑定信息
                 }
-                Matrix4x4 object_transform_matrix = mesh_part.m_transform_desc.m_transform_matrix;
+                Matrix4x4 object_transform_matrix = mesh_part.m_transform_desc.m_transform_matrix; // 子网格局部
 
-                mesh_part.m_transform_desc.m_transform_matrix =
-                    transform_component->getMatrix() * object_transform_matrix;
-                dirty_mesh_parts.push_back(mesh_part);
+                mesh_part.m_transform_desc.m_transform_matrix = transform_component->getMatrix() * object_transform_matrix; // 世界 = 父世界 * 子局部
 
-                mesh_part.m_transform_desc.m_transform_matrix = object_transform_matrix;
+                dirty_mesh_parts.push_back(mesh_part);  // 提交给渲染线程的快照
+
+                mesh_part.m_transform_desc.m_transform_matrix = object_transform_matrix; // 复原，避免污染组件内部状态
             }
 
+            // 逻辑与渲染的双缓冲
             RenderSwapContext& render_swap_context = g_runtime_global_context.m_render_system->getSwapContext();
             RenderSwapData&    logic_swap_data     = render_swap_context.getLogicSwapData();
 

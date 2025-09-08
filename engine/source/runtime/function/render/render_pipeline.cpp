@@ -19,6 +19,7 @@ namespace Momo
 {
     void RenderPipeline::initialize(RenderPipelineInitInfo init_info)
     {
+        // 创建所有 pass 的实例
         m_point_light_shadow_pass = std::make_shared<PointLightShadowPass>();
         m_directional_light_pass  = std::make_shared<DirectionalLightShadowPass>();
         m_main_camera_pass        = std::make_shared<MainCameraPass>();
@@ -31,7 +32,7 @@ namespace Momo
         m_particle_pass           = std::make_shared<ParticlePass>();
 
         RenderPassCommonInfo pass_common_info;
-        pass_common_info.rhi             = m_rhi;
+        pass_common_info.rhi             = m_rhi;  // 抽象 VulkanRHI
         pass_common_info.render_resource = init_info.render_resource;
 
         m_point_light_shadow_pass->setCommonInfo(pass_common_info);
@@ -52,10 +53,12 @@ namespace Momo
         std::shared_ptr<RenderPass>     _main_camera_pass = std::static_pointer_cast<RenderPass>(m_main_camera_pass);
         std::shared_ptr<ParticlePass> particle_pass = std::static_pointer_cast<ParticlePass>(m_particle_pass);
 
+        // 粒子系统
         ParticlePassInitInfo particle_init_info{};
         particle_init_info.m_particle_manager = g_runtime_global_context.m_particle_manager;
         m_particle_pass->initialize(&particle_init_info);
 
+        // 两种阴影贴图的 framebuffer image view 传给主摄像机 Pass
         main_camera_pass->m_point_light_shadow_color_image_view =
             std::static_pointer_cast<RenderPass>(m_point_light_shadow_pass)->getFramebufferImageViews()[0];
         main_camera_pass->m_directional_light_shadow_color_image_view =
@@ -68,31 +71,37 @@ namespace Momo
 
         std::static_pointer_cast<ParticlePass>(m_particle_pass)->setupParticlePass();
 
+        // 取主摄像机 Pass 的 descriptor_set_layouts，把 每网格布局 交给两种阴影 Pass，用于网格级资源绑定一致化
         std::vector<RHIDescriptorSetLayout*> descriptor_layouts = _main_camera_pass->getDescriptorSetLayouts();
         std::static_pointer_cast<PointLightShadowPass>(m_point_light_shadow_pass)
             ->setPerMeshLayout(descriptor_layouts[MainCameraPass::LayoutType::_per_mesh]);
         std::static_pointer_cast<DirectionalLightShadowPass>(m_directional_light_pass)
             ->setPerMeshLayout(descriptor_layouts[MainCameraPass::LayoutType::_per_mesh]);
 
+        // 阴影 Pass 在拿到 per-mesh layout 后做二次初始化
         m_point_light_shadow_pass->postInitialize();
         m_directional_light_pass->postInitialize();
 
+        // odd 备份缓冲
         ToneMappingPassInitInfo tone_mapping_init_info;
         tone_mapping_init_info.render_pass = _main_camera_pass->getRenderPass();
         tone_mapping_init_info.input_attachment =
             _main_camera_pass->getFramebufferImageViews()[_main_camera_pass_backup_buffer_odd];
         m_tone_mapping_pass->initialize(&tone_mapping_init_info);
 
+        // even 备份缓冲
         ColorGradingPassInitInfo color_grading_init_info;
         color_grading_init_info.render_pass = _main_camera_pass->getRenderPass();
         color_grading_init_info.input_attachment =
             _main_camera_pass->getFramebufferImageViews()[_main_camera_pass_backup_buffer_even];
         m_color_grading_pass->initialize(&color_grading_init_info);
 
+        // 复用主摄像机的render_pass
         UIPassInitInfo ui_init_info;
         ui_init_info.render_pass = _main_camera_pass->getRenderPass();
         m_ui_pass->initialize(&ui_init_info);
 
+        // 场景输入取 odd，UI 输入取 even，用于把 UI 叠加回场景颜色
         CombineUIPassInitInfo combine_ui_init_info;
         combine_ui_init_info.render_pass = _main_camera_pass->getRenderPass();
         combine_ui_init_info.scene_input_attachment =
@@ -105,6 +114,7 @@ namespace Momo
         pick_init_info.per_mesh_layout = descriptor_layouts[MainCameraPass::LayoutType::_per_mesh];
         m_pick_pass->initialize(&pick_init_info);
 
+        // 主摄像机的“post-process odd 缓冲”
         FXAAPassInitInfo fxaa_init_info;
         fxaa_init_info.render_pass = _main_camera_pass->getRenderPass();
         fxaa_init_info.input_attachment =
@@ -118,12 +128,16 @@ namespace Momo
         VulkanRHI*      vulkan_rhi      = static_cast<VulkanRHI*>(rhi.get());
         RenderResource* vulkan_resource = static_cast<RenderResource*>(render_resource.get());
 
+        // 把帧循环用的环形缓冲复位到当前帧起点
         vulkan_resource->resetRingBufferOffset(vulkan_rhi->m_current_frame_index);
 
+        // 等待上一帧 GPU 完成
         vulkan_rhi->waitForFences();
 
+        // 重置命令池，回收命令缓冲
         vulkan_rhi->resetCommandPool();
 
+        // 处理交换链尺寸变化
         bool recreate_swapchain =
             vulkan_rhi->prepareBeforePass(std::bind(&RenderPipeline::passUpdateAfterRecreateSwapchain, this));
         if (recreate_swapchain)
@@ -131,10 +145,12 @@ namespace Momo
             return;
         }
 
+        // 离屏绘制阴影
         static_cast<DirectionalLightShadowPass*>(m_directional_light_pass.get())->draw();
 
         static_cast<PointLightShadowPass*>(m_point_light_shadow_pass.get())->draw();
 
+        // 取出后处理/UI/粒子引用：为了把它们传给主摄像机的绘制入口（避免层层 get）
         ColorGradingPass& color_grading_pass = *(static_cast<ColorGradingPass*>(m_color_grading_pass.get()));
         FXAAPass&         fxaa_pass          = *(static_cast<FXAAPass*>(m_fxaa_pass.get()));
         ToneMappingPass&  tone_mapping_pass  = *(static_cast<ToneMappingPass*>(m_tone_mapping_pass.get()));
@@ -145,7 +161,8 @@ namespace Momo
         static_cast<ParticlePass*>(m_particle_pass.get())
             ->setRenderCommandBufferHandle(
                 static_cast<MainCameraPass*>(m_main_camera_pass.get())->getRenderCommandBuffer());
-
+        
+        // 主摄像机绘制（前向）
         static_cast<MainCameraPass*>(m_main_camera_pass.get())
             ->drawForward(color_grading_pass,
                           fxaa_pass,
@@ -212,6 +229,7 @@ namespace Momo
         static_cast<ParticlePass*>(m_particle_pass.get())->simulate();
     }
 
+    // 当窗口尺寸变化导致交换链/主摄像机 FBO 重建时，按新 framebuffer image view 索引逐个通知各 Pass
     void RenderPipeline::passUpdateAfterRecreateSwapchain()
     {
         MainCameraPass&   main_camera_pass   = *(static_cast<MainCameraPass*>(m_main_camera_pass.get()));
@@ -236,12 +254,15 @@ namespace Momo
         particle_pass.updateAfterFramebufferRecreate();
         g_runtime_global_context.m_debugdraw_manager->updateAfterRecreateSwapchain();
     }
+
+    // 返回像素处的网格/对象 GUID
     uint32_t RenderPipeline::getGuidOfPickedMesh(const Vector2& picked_uv)
     {
         PickPass& pick_pass = *(static_cast<PickPass*>(m_pick_pass.get()));
         return pick_pass.pick(picked_uv);
     }
 
+    // 修改主摄像机 Pass 的绘制状态（是否显示坐标轴、当前选中的轴）
     void RenderPipeline::setAxisVisibleState(bool state)
     {
         MainCameraPass& main_camera_pass = *(static_cast<MainCameraPass*>(m_main_camera_pass.get()));

@@ -9,12 +9,12 @@
 
 namespace Momo
 {
-    class Level;
-    class LevelDebugger;
-    class PhysicsScene;
+    // 前向声明
+    class Level;          // world 下包含多个 level
+    class LevelDebugger;    
+    class PhysicsScene;   // 物理场景
 
     /// Manage all game worlds, it should be support multiple worlds, including game world and editor world.
-    /// Currently, the implement just supports one active world and one active level
     class WorldManager
     {
     public:
@@ -23,11 +23,12 @@ namespace Momo
         void initialize();
         void clear();
 
+        // 加载/保存场景
         void reloadCurrentLevel();
         void saveCurrentLevel();
 
         void                 tick(float delta_time);
-        std::weak_ptr<Level> getCurrentActiveLevel() const { return m_current_active_level; }
+        std::weak_ptr<Level> getCurrentActiveLevel() const { return m_current_active_level; }  // 拿到当前的level
 
         std::weak_ptr<PhysicsScene> getCurrentActivePhysicsScene() const;
 

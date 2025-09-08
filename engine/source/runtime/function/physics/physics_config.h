@@ -15,6 +15,7 @@ namespace Momo
         uint32_t m_max_body_pairs {65536};
         uint32_t m_max_contact_constraints {10240};
 
+        // 多线程任务设置
         // job setting
         uint32_t m_max_job_count {1024};
         uint32_t m_max_barrier_count {8};

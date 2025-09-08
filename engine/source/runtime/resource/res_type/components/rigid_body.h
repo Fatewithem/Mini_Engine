@@ -27,7 +27,7 @@ namespace Momo
         RigidBodyShapeType m_type {RigidBodyShapeType::invalid};
 
         META(Enable)
-        Transform m_local_transform;
+        Transform m_local_transform;  // 局部姿态（位移/旋转/缩放）
         META(Enable)
         Reflection::ReflectionPtr<Geometry> m_geometry;
 

@@ -17,6 +17,7 @@
 
 namespace Momo
 {
+    // 在 Eidtor 模式下只让白名单里的组件参与 tick；在运行时模式下一律允许 tick
     bool shouldComponentTick(std::string component_type_name)
     {
         if (g_is_editor_mode)
@@ -42,8 +43,10 @@ namespace Momo
     {
         for (auto& component : m_components)
         {
+            // 判断当前模式下是否能 tick
             if (shouldComponentTick(component.getTypeName()))
-            {
+            {   
+                // 每个组件重载 tick
                 component->tick(delta_time);
             }
         }
@@ -82,10 +85,12 @@ namespace Momo
 
         ObjectDefinitionRes definition_res;
 
+        // 从 url 里读入
         const bool is_loaded_success = g_runtime_global_context.m_asset_manager->loadAsset(m_definition_url, definition_res);
         if (!is_loaded_success)
             return false;
 
+        // 创建默认定义的组件
         for (auto loaded_component : definition_res.m_components)
         {
             const std::string type_name = loaded_component.getTypeName();

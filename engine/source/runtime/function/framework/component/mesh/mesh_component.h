@@ -29,6 +29,7 @@ namespace Momo
         META(Enable)
         MeshComponentRes m_mesh_res;
 
+        // 包含多个 Part
         std::vector<GameObjectPartDesc> m_raw_meshes;
     };
 } // namespace Momo

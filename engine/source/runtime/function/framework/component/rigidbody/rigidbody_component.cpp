@@ -16,6 +16,7 @@ namespace Momo
     {
         m_parent_object = parent_object;
 
+        // 拿到当前 GO 的 transform 信息
         const TransformComponent* parent_transform = m_parent_object.lock()->tryGetComponentConst(TransformComponent);
         if (parent_transform == nullptr)
         {
@@ -23,10 +24,10 @@ namespace Momo
             return;
         }
 
-        std::shared_ptr<PhysicsScene> physics_scene =
-            g_runtime_global_context.m_world_manager->getCurrentActivePhysicsScene().lock();
+        std::shared_ptr<PhysicsScene> physics_scene = g_runtime_global_context.m_world_manager->getCurrentActivePhysicsScene().lock();
         ASSERT(physics_scene);
 
+        // 建立刚体
         m_rigidbody_id = physics_scene->createRigidBody(parent_transform->getTransformConst(), m_rigidbody_res);
     }
 
@@ -59,6 +60,7 @@ namespace Momo
 
     void RigidBodyComponent::updateGlobalTransform(const Transform& transform, bool is_scale_dirty)
     {
+        // 根据 scale 调整
         if (is_scale_dirty)
         {
             removeRigidBody();

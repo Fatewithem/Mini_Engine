@@ -13,12 +13,12 @@ namespace Momo
     {
         m_rigidbody_shape                                    = RigidBodyShape();
         m_rigidbody_shape.m_geometry                         = MOMO_REFLECTION_NEW(Capsule);
-        *static_cast<Capsule*>(m_rigidbody_shape.m_geometry) = m_capsule;
+        *static_cast<Capsule*>(m_rigidbody_shape.m_geometry) = m_capsule;  
 
-        m_rigidbody_shape.m_type = RigidBodyShapeType::capsule;
+        m_rigidbody_shape.m_type = RigidBodyShapeType::capsule;  // 初始化胶囊体碰撞形状
 
         Quaternion orientation;
-        orientation.fromAngleAxis(Radian(Degree(90.f)), Vector3::UNIT_X);
+        orientation.fromAngleAxis(Radian(Degree(90.f)), Vector3::UNIT_X);  // 计算一个 90° 绕 X 轴的四元数
 
         m_rigidbody_shape.m_local_transform =
             Transform(Vector3(0, 0, capsule.m_half_height + capsule.m_radius), orientation, Vector3::UNIT_SCALE);
@@ -26,14 +26,15 @@ namespace Momo
 
     Vector3 CharacterController::move(const Vector3& current_position, const Vector3& displacement)
     {
-        std::shared_ptr<PhysicsScene> physics_scene =
-            g_runtime_global_context.m_world_manager->getCurrentActivePhysicsScene().lock();
+        std::shared_ptr<PhysicsScene> physics_scene = g_runtime_global_context.m_world_manager->getCurrentActivePhysicsScene().lock();  // 拿到全局的物理场景
         ASSERT(physics_scene);
 
+        // 计算尝试的终点
         Vector3 final_position = current_position + displacement;
 
-        Transform final_transform = Transform(final_position, Quaternion::IDENTITY, Vector3::UNIT_SCALE);
+        Transform final_transform = Transform(final_position, Quaternion::IDENTITY, Vector3::UNIT_SCALE);  // 构造尝试能走到地方的位姿
 
+        // 调用物理接口做重叠检测
         if (physics_scene->isOverlap(m_rigidbody_shape, final_transform.getMatrix()))
         {
             final_position = current_position;
