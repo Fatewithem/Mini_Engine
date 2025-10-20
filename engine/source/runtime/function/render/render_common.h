@@ -1,0 +1,290 @@
+#pragma once
+
+#include "runtime/core/math/matrix4.h"
+#include "runtime/core/math/vector3.h"
+#include "runtime/core/math/vector4.h"
+
+#include "runtime/function/render/render_type.h"
+#include "interface/rhi.h"
+
+#include <vk_mem_alloc.h>
+#include <vulkan/vulkan.h>
+
+namespace Momo
+{
+    static const uint32_t s_point_light_shadow_map_dimension       = 2048;
+    static const uint32_t s_directional_light_shadow_map_dimension = 4096;
+
+    // TODO: 64 may not be the best
+    static uint32_t const s_mesh_per_drawcall_max_instance_count = 64;
+    static uint32_t const s_mesh_vertex_blending_max_joint_count = 1024;
+    static uint32_t const s_max_point_light_count                = 15;
+    // should sync the macros in "shader_include/constants.h"
+
+    // CPU 侧光源定义
+    struct VulkanSceneDirectionalLight
+    {
+        Vector3 direction;
+        float   _padding_direction;
+        Vector3 color;
+        float   _padding_color;
+    };
+
+    struct VulkanScenePointLight
+    {
+        Vector3 position;
+        float   radius;
+        Vector3 intensity;
+        float   _padding_intensity;
+    };
+
+    // 对应 Shader 中的 layout
+    struct MeshPerframeStorageBufferObject
+    {
+        Matrix4x4                   proj_view_matrix;
+        Vector3                     camera_position;
+        float                       _padding_camera_position;
+        Vector3                     ambient_light;
+        float                       _padding_ambient_light;
+        uint32_t                    point_light_num;
+        uint32_t                    _padding_point_light_num_1;
+        uint32_t                    _padding_point_light_num_2;
+        uint32_t                    _padding_point_light_num_3;
+        VulkanScenePointLight       scene_point_lights[s_max_point_light_count];
+        VulkanSceneDirectionalLight scene_directional_light;
+        Matrix4x4                   directional_light_proj_view;
+    };
+
+    // Mesh 实例
+    struct VulkanMeshInstance
+    {
+        float     enable_vertex_blending;
+        float     _padding_enable_vertex_blending_1;
+        float     _padding_enable_vertex_blending_2;
+        float     _padding_enable_vertex_blending_3;
+        Matrix4x4 model_matrix;  // 每个 mesh 有自己的模型矩阵
+    };
+
+    struct MeshPerdrawcallStorageBufferObject
+    {
+        VulkanMeshInstance mesh_instances[s_mesh_per_drawcall_max_instance_count];
+    };
+
+    // 骨骼动画数据
+    struct MeshPerdrawcallVertexBlendingStorageBufferObject
+    {
+        Matrix4x4 joint_matrices[s_mesh_vertex_blending_max_joint_count * s_mesh_per_drawcall_max_instance_count];
+    };
+
+    // 材质数据
+    struct MeshPerMaterialUniformBufferObject
+    {
+        Vector4 baseColorFactor {0.0f, 0.0f, 0.0f, 0.0f};
+
+        float metallicFactor    = 0.0f;
+        float roughnessFactor   = 0.0f;
+        float normalScale       = 0.0f;
+        float occlusionStrength = 0.0f;
+
+        Vector3  emissiveFactor  = {0.0f, 0.0f, 0.0f};
+        uint32_t is_blend        = 0;
+        uint32_t is_double_sided = 0;
+    };
+
+    //  阴影 Buffer
+    struct MeshPointLightShadowPerframeStorageBufferObject
+    {
+        uint32_t point_light_num;
+        uint32_t _padding_point_light_num_1;
+        uint32_t _padding_point_light_num_2;
+        uint32_t _padding_point_light_num_3;
+        Vector4  point_lights_position_and_radius[s_max_point_light_count];
+    };
+
+    struct MeshPointLightShadowPerdrawcallStorageBufferObject
+    {
+        VulkanMeshInstance mesh_instances[s_mesh_per_drawcall_max_instance_count];
+    };
+
+    struct MeshPointLightShadowPerdrawcallVertexBlendingStorageBufferObject
+    {
+        Matrix4x4 joint_matrices[s_mesh_vertex_blending_max_joint_count * s_mesh_per_drawcall_max_instance_count];
+    };
+
+    struct MeshDirectionalLightShadowPerframeStorageBufferObject
+    {
+        Matrix4x4 light_proj_view;
+    };
+
+    struct MeshDirectionalLightShadowPerdrawcallStorageBufferObject
+    {
+        VulkanMeshInstance mesh_instances[s_mesh_per_drawcall_max_instance_count];
+    };
+
+    struct MeshDirectionalLightShadowPerdrawcallVertexBlendingStorageBufferObject
+    {
+        Matrix4x4 joint_matrices[s_mesh_vertex_blending_max_joint_count * s_mesh_per_drawcall_max_instance_count];
+    };
+
+    // 坐标轴 Gizmo 的模型矩阵
+    struct AxisStorageBufferObject
+    {
+        Matrix4x4 model_matrix  = Matrix4x4::IDENTITY;
+        uint32_t  selected_axis = 3;
+    };
+
+    // 粒子系统的 billboard 朝向信息
+    struct ParticleBillboardPerframeStorageBufferObject
+    {
+        Matrix4x4 proj_view_matrix;
+        Vector3   right_direction;
+        float     _padding_right_position;
+        Vector3   up_direction;
+        float     _padding_up_direction;
+        Vector3   foward_direction;
+        float     _padding_forward_position;
+    };
+
+    struct ParticleCollisionPerframeStorageBufferObject
+    {
+        Matrix4x4 view_matrix;
+        Matrix4x4 proj_view_matrix;
+        Matrix4x4 proj_inv_matrix;
+    };
+
+    // TODO: 4096 may not be the best
+    static constexpr int s_particle_billboard_buffer_size = 4096;
+    struct ParticleBillboardPerdrawcallStorageBufferObject
+    {
+        Vector4 positions[s_particle_billboard_buffer_size];
+        Vector4 sizes[s_particle_billboard_buffer_size];
+        Vector4 colors[s_particle_billboard_buffer_size];
+    };
+
+    // 拾取（picking）的辅助 buffer
+    struct MeshInefficientPickPerframeStorageBufferObject
+    {
+        Matrix4x4 proj_view_matrix;
+        uint32_t  rt_width;
+        uint32_t  rt_height;
+    };
+
+    struct MeshInefficientPickPerdrawcallStorageBufferObject
+    {
+        Matrix4x4 model_matrices[s_mesh_per_drawcall_max_instance_count];
+        uint32_t  node_ids[s_mesh_per_drawcall_max_instance_count];
+        float     enable_vertex_blendings[s_mesh_per_drawcall_max_instance_count];
+    };
+
+    struct MeshInefficientPickPerdrawcallVertexBlendingStorageBufferObject
+    {
+        Matrix4x4 joint_matrices[s_mesh_vertex_blending_max_joint_count * s_mesh_per_drawcall_max_instance_count];
+    };
+
+    // mesh
+    struct VulkanMesh
+    {
+        bool enable_vertex_blending;                // 是否启用顶点蒙皮（骨骼动画）
+
+        uint32_t mesh_vertex_count;                 // 顶点数量
+
+        // 顶点数据缓冲区（位置）
+        RHIBuffer*    mesh_vertex_position_buffer;  // 存放顶点位置 (vec3/vec4)
+        VmaAllocation mesh_vertex_position_buffer_allocation; // VMA 分配信息，用于管理显存
+
+        // 骨骼动画相关缓冲（每个顶点是否启用蒙皮）
+        RHIBuffer*    mesh_vertex_varying_enable_blending_buffer; 
+        VmaAllocation mesh_vertex_varying_enable_blending_buffer_allocation;
+
+        // 骨骼动画相关缓冲（每个顶点的关节绑定信息：joint indices + weights）
+        RHIBuffer*    mesh_vertex_joint_binding_buffer;         
+        VmaAllocation mesh_vertex_joint_binding_buffer_allocation;
+
+        // 顶点蒙皮描述符集，用于把相关缓冲绑定到 Shader
+        RHIDescriptorSet* mesh_vertex_blending_descriptor_set;
+
+        // 顶点的其他属性缓冲（normal、uv、tangent 等）
+        RHIBuffer*    mesh_vertex_varying_buffer;
+        VmaAllocation mesh_vertex_varying_buffer_allocation;
+
+        uint32_t mesh_index_count;                  // 索引数量
+
+        // 索引缓冲
+        RHIBuffer*    mesh_index_buffer;            // 存放绘制用的索引 (uint16_t/uint32_t)
+        VmaAllocation mesh_index_buffer_allocation;
+    };
+
+    // material
+    struct VulkanPBRMaterial
+    {
+        RHIImage*       base_color_texture_image;
+        RHIImageView*   base_color_image_view;
+        VmaAllocation   base_color_image_allocation;
+
+        RHIImage*       metallic_roughness_texture_image;
+        RHIImageView*   metallic_roughness_image_view;
+        VmaAllocation   metallic_roughness_image_allocation;
+
+        RHIImage*       normal_texture_image;
+        RHIImageView*   normal_image_view;
+        VmaAllocation   normal_image_allocation;
+
+        RHIImage*       occlusion_texture_image;
+        RHIImageView*   occlusion_image_view;
+        VmaAllocation   occlusion_image_allocation;
+
+        RHIImage*       emissive_texture_image;
+        RHIImageView*   emissive_image_view;
+        VmaAllocation   emissive_image_allocation;
+
+        RHIBuffer*      material_uniform_buffer;
+        VmaAllocation   material_uniform_buffer_allocation;
+
+        RHIDescriptorSet* material_descriptor_set;
+    };
+
+    // nodes
+    struct RenderMeshNode
+    {
+        const Matrix4x4*   model_matrix {nullptr};   // 模型变换矩阵（世界空间位置、旋转、缩放）
+        const Matrix4x4*   joint_matrices {nullptr}; // 骨骼动画的关节矩阵数组
+        uint32_t           joint_count {0};          // 骨骼数量
+        VulkanMesh*        ref_mesh {nullptr};       // 指向具体的 Mesh GPU 数据
+        VulkanPBRMaterial* ref_material {nullptr};   // 指向具体的材质 GPU 数据
+        uint32_t           node_id;                  // 节点 ID，唯一标识
+        bool               enable_vertex_blending {false}; // 是否启用顶点蒙皮
+    };
+
+    struct RenderAxisNode
+    {
+        Matrix4x4   model_matrix {Matrix4x4::IDENTITY}; // 坐标轴的变换
+        VulkanMesh* ref_mesh {nullptr};                 // 对应的 mesh（比如三根彩色线条）
+        uint32_t    node_id;
+        bool        enable_vertex_blending {false};
+    };
+
+    struct TextureDataToUpdate
+    {
+        void*              base_color_image_pixels;
+        uint32_t           base_color_image_width;
+        uint32_t           base_color_image_height;
+        RHIFormat base_color_image_format;
+        void*              metallic_roughness_image_pixels;
+        uint32_t           metallic_roughness_image_width;
+        uint32_t           metallic_roughness_image_height;
+        RHIFormat metallic_roughness_image_format;
+        void*              normal_roughness_image_pixels;
+        uint32_t           normal_roughness_image_width;
+        uint32_t           normal_roughness_image_height;
+        RHIFormat normal_roughness_image_format;
+        void*              occlusion_image_pixels;
+        uint32_t           occlusion_image_width;
+        uint32_t           occlusion_image_height;
+        RHIFormat occlusion_image_format;
+        void*              emissive_image_pixels;
+        uint32_t           emissive_image_width;
+        uint32_t           emissive_image_height;
+        RHIFormat emissive_image_format;
+        VulkanPBRMaterial* now_material;
+    };
+} // namespace Momo
