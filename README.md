@@ -41,4 +41,4 @@
 ### 补充
 - Vulkan实现的 **PBD 布料模拟**
 
-<img src="cloth.jpg" alt="Cloth Simulation" width="600">
+<img src="cloth.jpg" alt="Cloth Simulation" width="400">
