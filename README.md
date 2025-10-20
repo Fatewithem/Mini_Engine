@@ -4,7 +4,7 @@
 实现模块化渲染管线、资源系统、动画与物理模块，支持 **Tiled-based 延迟渲染**、**PBR 材质**、**LUT 后处理** 及基于 **Jolt Physics** 的刚体模拟与碰撞检测。  
 内置 **ImGui 编辑器** 与 **Lua 脚本系统**，支持资源加载与对象属性实时编辑。
 
-![UI 界面](UI.png)
+<img src="UI.png" alt="UI 界面" width="600">
 
 ---
 
@@ -40,4 +40,5 @@
 
 ### 补充
 - Vulkan实现的 **PBD 布料模拟**
-  ![渲染效果](cloth.jpg)
+
+<img src="cloth.jpg" alt="Cloth Simulation" width="600">
